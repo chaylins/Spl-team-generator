@@ -16,7 +16,7 @@ processed_users = list()
 
 def prepare_database():
 
-    prepare_db = True
+    prepare_db = False
 
     if prepare_db:
         response = requests.get('https://api.splinterlands.com/players/leaderboard?format=modern', headers={'accept': 'application/json'})
@@ -118,7 +118,7 @@ def getGameHistory(thread_id, work_queue):
 
 
 def crawl_games():
-    users = dbc.execute_select(" SELECT PLAYER_NAME, CHECKED_TIMESTAMP FROM SPL_USERS ORDER BY 2 DESC LIMIT 100 ;")
+    users = dbc.execute_select(" SELECT PLAYER_NAME, CHECKED_TIMESTAMP FROM SPL_USERS ORDER BY 2 ASC LIMIT 100 ;")
 
     thread_list = ["Thread-1", "Thread-2", "Thread-3", "Thread-4", "Thread-5", "Thread-6", "Thread-7", "Thread-8", "Thread-9"]
     workQueue = queue.Queue()
@@ -151,7 +151,7 @@ def crawl_games():
 
 
 def update_user_processed_times():
-    print(f'Users to update: {processed_users}')
+    print(f'Users to update {len(processed_users)}: {processed_users}')
     print('---Starting user update---')
     if len(processed_users) > 0:
          dbc.execute_query('UPDATE SPL_USERS SET CHECKED_TIMESTAMP = %s WHERE PLAYER_NAME IN %s', [datetime.now().strftime('%Y-%m-%d %H:%M:%S'), tuple(user for user in processed_users)])
@@ -192,7 +192,7 @@ def main():
         processed_users.clear()
         print('Finished processing. Sleeping 5 minutes now')
         run_number =+ 1
-        time.sleep(720)
+        time.sleep(300)
 
 
 if __name__ == "__main__":
