@@ -1,12 +1,11 @@
 import time
-import psycopg2
 
 import requests
 import json
-import dbConnector
+import src.Database.dbConnector as dbConnector
 import queue
 import threading
-from datetime import datetime, timezone
+from datetime import datetime
 
 dbc = dbConnector.Database()
 data_lock = threading.Lock()
@@ -16,7 +15,7 @@ processed_users = list()
 
 def prepare_database():
 
-    prepare_db = False
+    prepare_db = True
 
     if prepare_db:
         response = requests.get('https://api.splinterlands.com/players/leaderboard?format=modern', headers={'accept': 'application/json'})
@@ -118,7 +117,7 @@ def getGameHistory(thread_id, work_queue):
 
 
 def crawl_games():
-    users = dbc.execute_select(" SELECT PLAYER_NAME, CHECKED_TIMESTAMP FROM SPL_USERS ORDER BY 2 ASC LIMIT 100 ;")
+    users = dbc.execute_select(" SELECT PLAYER_NAME, CHECKED_TIMESTAMP FROM SPL_USERS ORDER BY 2 ASC LIMIT 500 ;")
 
     thread_list = ["Thread-1", "Thread-2", "Thread-3", "Thread-4", "Thread-5", "Thread-6", "Thread-7", "Thread-8", "Thread-9"]
     workQueue = queue.Queue()
