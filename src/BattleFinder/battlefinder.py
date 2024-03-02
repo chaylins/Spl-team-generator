@@ -16,25 +16,20 @@ def update_card_collection():
 
     print('Card collection updated')
 
+def CalculateTeams():
+    available_cards = dbc.execute_query("SELECT CARD_ID FROM publicSPL_CARDS WHERE OWNED=True ; ")
 
-def battle_found():
-     response = requests.get('https://api.splinterlands.com/battle/battle_queue?username=wanfortheboyz', headers={'accept': 'application/json'})
-     json_response = json.loads(response.text)
+    possible_teams = dbc.execute_query("SELECT TEAM_ID, (GAMES_WON)/(GAMES_WON + GAMES_LOST) * 100 AS WIN_RATE FROM WIN_RATES")
 
-     if len(json_response) > 0:
-          return True
-     
-     return False
 
 def main():
      update_card_collection()
 
-     while True:
-          if battle_found():
-               pass
-          else:
-               print('No battle found, sleeping...')
-               time.sleep(100)
+     rules_list = ['Standard']
+     inactive_list = ['Black']
+     mana_cap = 40
+
+     # possible_teams = CalculateTeams()
 
 if __name__ == "__main__":
     main()

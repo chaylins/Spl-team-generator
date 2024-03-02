@@ -44,6 +44,7 @@ def populate_db_with_guild_kings():
 def prepare_database():
 
     prepare_db = False
+    update_cards = False
 
     if prepare_db:
         response = requests.get('https://api.splinterlands.com/players/leaderboard?format=modern', headers={'accept': 'application/json'})
@@ -56,6 +57,8 @@ def prepare_database():
         
         dbc.execute_query(" INSERT INTO public.SPL_USERS VALUES (%s, %s) ON CONFLICT DO NOTHING;", ['wanfortheboyz', '1900-01-01 00:00:00'])
 
+    if update_cards:
+        print('Updating cards DB...')
         response = requests.get('https://api.splinterlands.com/cards/get_details', headers={'accept': 'application/json'})
         json_response = json.loads(response.text)
         
@@ -64,11 +67,21 @@ def prepare_database():
                             item['name'],
                             item['type'],
                             item['color'],
-                            False,
+                            True if item['editions'] in ['12'] and item['rarity'] < 2 else False,
                             item['stats']['mana'][0] if isinstance(item['stats']['mana'], list) else item['stats']['mana']
                     ]
             
             dbc.execute_query(" INSERT INTO public.spl_cards VALUES(%s, %s, %s, %s, %s, %s); ", params)
+        
+        print('Updating card collection first...')
+        response = requests.get('https://api.splinterlands.com/cards/collection/wanfortheboyz', headers={'accept': 'application/json'})
+        json_response = json.loads(response.text)
+
+        for item in json_response['cards']:
+            params = [ int(item['card_detail_id']) ]
+            dbc.execute_query(" UPDATE public.spl_cards SET owned=true where card_id = %s ;", params)
+
+        print('Card collection updated')
 
 
 def getGameHistory(thread_id, work_queue):
@@ -100,13 +113,11 @@ def getGameHistory(thread_id, work_queue):
 
         if user_name[1] > datetime.strptime(json_response['battles'][0]['created_date'], '%Y-%m-%dT%H:%M:%S.%fZ'):
             battle_time = {json_response['battles'][0]['created_date']}
-            print(f'user: {user_name[1]}, battle_time: {battle_time}')
             print(f'No new battles. Skipped user {user_name[0]}')
             processed_users.append(user_name[0])
             continue
 
         try:
-            print(f'New battle found for user: {user_name[0]}')
             for item in json_response['battles']:
                 # Identify surrenders and draws and ignore
                 try:
@@ -117,9 +128,10 @@ def getGameHistory(thread_id, work_queue):
 
                 if user_name[1] > datetime.strptime(item['created_date'], '%Y-%m-%dT%H:%M:%S.%fZ'):
                     print(f'No more new battles. Skipped user {user_name[0]}')
-                    processed_users.append(user_name[0])
-                    continue
-
+                    break
+                
+                print(f'New battle found for user: {user_name[0]}')
+                
                 params = (item['battle_queue_id_1'],
                         item['battle_queue_id_2'],
                         item['player_1'],
@@ -154,7 +166,7 @@ def getGameHistory(thread_id, work_queue):
 
 
 def crawl_games():
-    users = dbc.execute_select(" SELECT PLAYER_NAME, CHECKED_TIMESTAMP FROM SPL_USERS ORDER BY 2 ASC LIMIT 100 ;")
+    users = dbc.execute_select(" SELECT PLAYER_NAME, CHECKED_TIMESTAMP FROM SPL_USERS ORDER BY 2 ASC LIMIT 600 ;")
 
     thread_list = ["Thread-1", "Thread-2", "Thread-3", "Thread-4", "Thread-5", "Thread-6", "Thread-7"]
     workQueue = queue.Queue()
